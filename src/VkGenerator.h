@@ -2,6 +2,12 @@
 
 #include "vulkan/vulkan.hpp"
 
+enum class ELibrary : unsigned char
+{
+	GLFW = 1 << 1,
+	SDL2 = 1 << 2,
+};
+
 class VkGenerator
 {
 public:
