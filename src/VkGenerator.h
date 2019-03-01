@@ -2,10 +2,10 @@
 
 #include "vulkan/vulkan.hpp"
 
-enum class ELibrary : unsigned char
+enum class ELibrary
 {
-	GLFW = 1 << 1,
-	SDL2 = 1 << 2,
+	GLFW,
+	SDL2,
 };
 
 class VkGenerator
@@ -14,6 +14,8 @@ public:
 	/* constructor/destructor */
 	VkGenerator( ) = default;
 	~VkGenerator( ) = default;
+
+	explicit VkGenerator( ELibrary _library ) { /* Not Implemented */ }
 
 	/* copy */
 	VkGenerator( const VkGenerator& _other ) = delete;

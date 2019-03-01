@@ -4,6 +4,6 @@
     <ClInclude Include="..\src\VkGenerator.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="..\src\Main.cpp" />
   </ItemGroup>
 </Project>
