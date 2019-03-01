@@ -15,8 +15,6 @@ public:
 	VkGenerator( ) = default;
 	~VkGenerator( ) = default;
 
-	explicit VkGenerator( ELibrary _library ) { /* Not Implemented */ }
-
 	/* copy */
 	VkGenerator( const VkGenerator& _other ) = delete;
 	void operator=( const VkGenerator& _other ) = delete;
