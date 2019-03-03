@@ -82,3 +82,5 @@ private:
 		VK_KHR_SWAPCHAIN_EXTENSION_NAME
 	};
 };
+
+#include "VkGenerator.ipp"
