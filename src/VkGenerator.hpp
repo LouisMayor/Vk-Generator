@@ -63,7 +63,8 @@ namespace VkGen
 		/* Helpers */
 		std::vector<const char*> GetRequiredExtensions( ) const;
 		bool ValidationLayerSupport( ) const;
-		QueueFamilyIndices FindQueueFamily( ) const;
+		QueueFamilyIndices FindQueueFamily( const vk::PhysicalDevice ) const;
+		bool isDeviceSuitable( const vk::PhysicalDevice ) const;
 
 		/* Vk api functions */
 		void CreateInstance( );
@@ -77,6 +78,12 @@ namespace VkGen
 		/* private members */
 	private:
 		vk::Instance m_instance;
+		vk::PhysicalDevice m_physical_device;
+		vk::Device m_device;
+
+		// potentially passed in via caller and not stored with VkGenerator
+		vk::Queue m_graphics_queue;
+		vk::Queue m_present_queue;
 
 		bool m_validation = false;
 
