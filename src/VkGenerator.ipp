@@ -61,7 +61,10 @@ namespace VkGen
 
     inline void VkGenerator::CreateInstance( )
     {
-        assert( ( "validation layers not available, despite being requested", m_validation && ValidationLayerSupport( ) ) );
+	    if ( m_validation )
+	    {
+			assert( ( "validation layers not available, despite being requested", ValidationLayerSupport( ) ) );
+	    }
 
         const auto extensions = GetRequiredExtensions( );
 
