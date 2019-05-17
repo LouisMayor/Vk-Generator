@@ -123,7 +123,26 @@ namespace VkGen
 
 	inline VkBool32 VkGenerator::ValidationLayerSupport( ) const
 	{
-		// todo: check layer support
+		auto layerProperties = vk::enumerateInstanceLayerProperties();
+
+		for ( const char* layer : m_validation_layers )
+		{
+			bool layerFound = false;
+			for (vk::LayerProperties properties : layerProperties)
+			{
+				if( strcmp( layer, properties.layerName ) == 0 )
+				{
+					layerFound = true;
+					break;
+				}
+			}
+
+			if( !layerFound )
+			{
+				return false;
+			}
+		}
+
 		return true;
 	}
 
