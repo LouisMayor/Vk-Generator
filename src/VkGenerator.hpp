@@ -7,9 +7,9 @@ namespace VkGen
 	struct QueueFamilyIndices
 	{
 		int graphics_family = -1;
-		int present_family = -1;
+		int present_family  = -1;
 
-		bool IsComplete( ) const
+		bool IsComplete() const
 		{
 			return graphics_family >= 0 && present_family >= 0;
 		}
@@ -17,9 +17,9 @@ namespace VkGen
 
 	struct SwapChainSupportDetails
 	{
-		vk::SurfaceCapabilitiesKHR capabilities;
+		vk::SurfaceCapabilitiesKHR        capabilities;
 		std::vector<vk::SurfaceFormatKHR> formats;
-		std::vector<vk::PresentModeKHR> presentModes;
+		std::vector<vk::PresentModeKHR>   presentModes;
 	};
 
 	enum class ELibrary
@@ -30,12 +30,12 @@ namespace VkGen
 	};
 
 #if defined(SDL_VERSION_ATLEAST)
-// SDL
+	// SDL
 #if SDL_VERSION_ATLEAST(2,0,0)
 	constexpr ELibrary platform_lib = ELibrary::SDL2;
 	using WindowHandle = SDL_Window;
 #endif
-// GLFW
+	// GLFW
 #elif defined( GLFWAPI )
 	constexpr ELibrary platform_lib = ELibrary::GLFW;
 	using WindowHandle = GLFWwindow;
@@ -48,47 +48,68 @@ namespace VkGen
 		/* public functions */
 	public:
 		/* constructor/destructor */
-		VkGenerator( const bool _enable_validation, const int _bufferX, const int _bufferY ) : m_validation( _enable_validation ), m_isDestroyed( false )
-		{ m_buffer_resolution[0] = _bufferX; m_buffer_resolution[1] = _bufferY; }
+		VkGenerator(const bool _enable_validation,
+		            const int  _bufferX,
+		            const int  _bufferY) : m_validation(_enable_validation),
+		                                   m_isDestroyed(false)
+		{
+			m_buffer_resolution[0] = _bufferX;
+			m_buffer_resolution[1] = _bufferY;
+		}
 
-		~VkGenerator( )
-		{ Destroy(); }
+		~VkGenerator()
+		{
+			Destroy();
+		}
 
 		/* copy */
-		VkGenerator( const VkGenerator& _other ) = delete;
-		void operator=( const VkGenerator& _other ) = delete;
+		VkGenerator(const VkGenerator& _other) = delete;
+
+		void operator=(const VkGenerator& _other) = delete;
 
 		/* move */
-		VkGenerator( const VkGenerator&& _other ) = delete;
-		void operator=( const VkGenerator&& _other ) = delete;
+		VkGenerator(const VkGenerator&& _other) = delete;
+
+		void operator=(const VkGenerator&& _other) = delete;
 
 		/* Test */
-		void SelfTest( );
+		void SelfTest();
 
 		/* Destroy */
 		void Destroy();
 
 		/* private functions */
 	private:
-		VkGenerator( ) = default;
+		VkGenerator() = default;
 
 		/* Helpers */
-		std::vector<const char*> GetRequiredExtensions( ) const;
-		VkBool32 ValidationLayerSupport( ) const;
-		VkBool32 IsDeviceSuitable( const vk::PhysicalDevice );
-		QueueFamilyIndices FindQueueFamilies( const vk::PhysicalDevice );
-		VkBool32 CheckDeviceExtensionSupport( const vk::PhysicalDevice );
-		SwapChainSupportDetails QuerySwapChainSupport( const vk::PhysicalDevice );
+		std::vector<const char*> GetRequiredExtensions() const;
+
+		VkBool32 ValidationLayerSupport() const;
+
+		VkBool32 IsDeviceSuitable(const vk::PhysicalDevice);
+
+		QueueFamilyIndices FindQueueFamilies(const vk::PhysicalDevice);
+
+		VkBool32 CheckDeviceExtensionSupport(const vk::PhysicalDevice);
+
+		SwapChainSupportDetails QuerySwapChainSupport(const vk::PhysicalDevice);
 
 		/* Vk api functions */
 		void CreateWindow();
-		void CreateInstance( );
-		void PickPhysicalDevice( );
-		void CreateLogicalDevice( );
-		void CreateSurface( );
+
+		void CreateInstance();
+
+		void PickPhysicalDevice();
+
+		void CreateLogicalDevice();
+
+		void CreateSurface();
 
 		void DestroyInstance();
+
 		void DestroyDevice();
+
 		void DestroySurface();
 
 		bool IsDestroyed() const;
@@ -98,20 +119,20 @@ namespace VkGen
 
 		/* private members */
 	private:
-		vk::Instance m_instance;
+		vk::Instance       m_instance;
 		vk::PhysicalDevice m_physical_device;
-		vk::Device m_device;
+		vk::Device         m_device;
 
 		// potentially passed in via caller and not stored with VkGenerator
 		vk::Queue m_graphics_queue;
 		vk::Queue m_present_queue;
 
 		vk::SurfaceKHR m_surface;
-		WindowHandle* m_window_handle;
+		WindowHandle*  m_window_handle;
 
 		int m_buffer_resolution[2];
 
-		bool m_validation = false;
+		bool m_validation  = false;
 		bool m_isDestroyed = true;
 
 		const std::vector<const char*> m_validation_layers =
