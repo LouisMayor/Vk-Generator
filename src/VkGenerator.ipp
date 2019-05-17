@@ -2,29 +2,126 @@
 
 #include "VkGenerator.hpp"
 #include <set>
+#include <iostream>
 
 namespace VkGen
 {
 	inline void VkGenerator::SelfTest( )
 	{
+		m_isDestroyed = false;
+
+		CreateWindow();
 		CreateInstance( );
+		CreateSurface( );
 		PickPhysicalDevice( );
 		CreateLogicalDevice( );
+
+		Destroy();
 	}
 
-	inline bool VkGenerator::isDeviceSuitable( const vk::PhysicalDevice _physical_device ) const
+	inline void VkGenerator::CreateWindow()
 	{
-		return false;
+		if( platform_lib == ELibrary::SDL2 )
+		{
+		}
+		else if( platform_lib == ELibrary::GLFW )
+		{
+			glfwInit( );
+
+			glfwWindowHint( GLFW_CLIENT_API, GLFW_NO_API );
+			glfwWindowHint( GLFW_RESIZABLE, GLFW_TRUE );
+
+			m_window_handle = glfwCreateWindow( static_cast<int>( m_buffer_resolution[0] ),
+												static_cast<int>( m_buffer_resolution[1] ),
+												"Vulkan Generator Window", nullptr, nullptr );
+
+			if( m_window_handle == nullptr )
+			{
+				std::cerr << "Failed to create GLFW window" << std::endl;
+				glfwTerminate( );
+				return;
+			}
+
+			glfwSetWindowPos( m_window_handle, 0, 30 );
+			glfwHideWindow( m_window_handle );
+		}
 	}
 
-	inline QueueFamilyIndices VkGenerator::FindQueueFamily( const vk::PhysicalDevice _physical_device ) const
+	inline QueueFamilyIndices VkGenerator::FindQueueFamilies( const vk::PhysicalDevice _physical_device )
 	{
 		QueueFamilyIndices indices;
-		// todo: find queue family
+		auto queueProperties = _physical_device.getQueueFamilyProperties();
+
+		int i = 0;
+		for ( const auto& family : queueProperties )
+		{
+			if( family.queueCount > 0 && family.queueFlags & vk::QueueFlagBits::eGraphics )
+			{
+				indices.graphics_family = i;
+			}
+
+			auto presentSupport = _physical_device.getSurfaceSupportKHR(i, m_surface);
+
+			if( family.queueCount > 0 && presentSupport )
+			{
+				indices.present_family = i;
+			}
+
+			if( indices.IsComplete( ) )
+			{
+				break;
+			}
+
+			i++;
+		}
+
 		return indices;
 	}
 
-	inline bool VkGenerator::ValidationLayerSupport( ) const
+	inline VkBool32 VkGenerator::CheckDeviceExtensionSupport( const vk::PhysicalDevice _physical_device )
+	{
+		auto extensions = _physical_device.enumerateDeviceExtensionProperties();
+
+		std::set<std::string> requiredExtensions( m_device_extensions.begin( ), m_device_extensions.end( ) );
+
+		for( const auto& extension : extensions )
+		{
+			requiredExtensions.erase( extension.extensionName );
+		}
+
+		return requiredExtensions.empty( );
+	}
+
+	inline SwapChainSupportDetails VkGenerator::QuerySwapChainSupport( const vk::PhysicalDevice _physical_device )
+	{
+		SwapChainSupportDetails details;
+
+		details.capabilities = _physical_device.getSurfaceCapabilitiesKHR( m_surface );
+		details.formats = _physical_device.getSurfaceFormatsKHR( m_surface );
+		details.presentModes = _physical_device.getSurfacePresentModesKHR( m_surface );
+
+		return details;
+	}
+
+	inline VkBool32 VkGenerator::IsDeviceSuitable( const vk::PhysicalDevice _physical_device )
+	{
+		QueueFamilyIndices indices = FindQueueFamilies( _physical_device );
+		const VkBool32 extensionSupported = CheckDeviceExtensionSupport( _physical_device );
+
+		bool swapChainAdequate = false;
+
+		if( extensionSupported )
+		{
+			SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport( _physical_device );
+			swapChainAdequate = !swapChainSupport.formats.empty( ) && !swapChainSupport.presentModes.empty( );
+		}
+
+		vk::PhysicalDeviceFeatures supportedFeatures = _physical_device.getFeatures();
+
+		return indices.IsComplete( ) && extensionSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+	}
+
+	inline VkBool32 VkGenerator::ValidationLayerSupport( ) const
 	{
 		// todo: check layer support
 		return true;
@@ -40,7 +137,16 @@ namespace VkGen
 		}
 		else if( platform_lib == ELibrary::GLFW )
 		{
-			// grab GLFW extensions
+			uint32_t glfwExtensionCount = 0;
+			const char** glfwExtensions;
+			glfwExtensions = glfwGetRequiredInstanceExtensions( &glfwExtensionCount );
+
+			required_extensions = std::vector<const char*>( glfwExtensions, glfwExtensions + glfwExtensionCount );
+
+			if( m_validation )
+			{
+				required_extensions.push_back( VK_EXT_DEBUG_UTILS_EXTENSION_NAME );
+			}
 		}
 
 		assert( ( "failed to get required extensions", required_extensions.size( ) > 0 ) );
@@ -55,7 +161,13 @@ namespace VkGen
 		}
 		else if( platform_lib == ELibrary::GLFW )
 		{
-			// create GLFW surface
+			auto surface = VkSurfaceKHR(m_surface);
+			if( glfwCreateWindowSurface( VkInstance(m_instance), m_window_handle, nullptr, &surface ) != VK_SUCCESS )
+			{
+				throw std::runtime_error( "failed to create window surface!" );
+			}
+
+			m_surface = vk::SurfaceKHR(surface);
 		}
 	}
 
@@ -98,7 +210,7 @@ namespace VkGen
 
 		for( const auto& device : devices )
 		{
-			if( isDeviceSuitable( device ) )
+			if( IsDeviceSuitable( device ) )
 			{
 				m_physical_device = device;
 				break;
@@ -110,7 +222,7 @@ namespace VkGen
 
 	inline void VkGenerator::CreateLogicalDevice( )
 	{
-		QueueFamilyIndices indices = FindQueueFamily( m_physical_device );
+		QueueFamilyIndices indices = FindQueueFamilies( m_physical_device );
 
 		std::vector<vk::DeviceQueueCreateInfo> queue_create_info = {};
 		std::set<int> unique_queue_families = { indices.graphics_family, indices.present_family };
@@ -151,5 +263,56 @@ namespace VkGen
 
 		m_graphics_queue = m_device.getQueue( indices.graphics_family, 0 );
 		m_present_queue = m_device.getQueue( indices.present_family, 0 );
+	}
+
+	inline bool VkGenerator::IsDestroyed() const
+	{
+		return m_isDestroyed;
+	}
+
+	inline void VkGenerator::Destroy()
+	{
+		if (IsDestroyed())
+		{
+			return;
+		}
+
+		m_device.waitIdle();
+
+		DestroyDevice();
+		DestroySurface();
+		DestroyInstance();
+
+		m_isDestroyed = true;
+	}
+
+	inline void VkGenerator::DestroyDevice()
+	{
+		if (m_device == nullptr)
+		{
+			return;
+		}
+
+		m_device.destroy();
+	}
+
+	inline void VkGenerator::DestroyInstance( )
+	{
+		if(m_instance == nullptr)
+		{
+			return;
+		}
+
+		m_instance.destroy();
+	}
+
+	inline void VkGenerator::DestroySurface( )
+	{
+		if (m_instance == nullptr || m_surface == nullptr)
+		{
+			return;
+		}
+
+		m_instance.destroySurfaceKHR(m_surface);
 	}
 }

@@ -15,6 +15,13 @@ namespace VkGen
 		}
 	};
 
+	struct SwapChainSupportDetails
+	{
+		vk::SurfaceCapabilitiesKHR capabilities;
+		std::vector<vk::SurfaceFormatKHR> formats;
+		std::vector<vk::PresentModeKHR> presentModes;
+	};
+
 	enum class ELibrary
 	{
 		GLFW,
@@ -41,9 +48,11 @@ namespace VkGen
 		/* public functions */
 	public:
 		/* constructor/destructor */
-		VkGenerator( const bool _enable_validation ) : m_validation( _enable_validation )
-		{ /* hello there! */ }
-		~VkGenerator( ) = default;
+		VkGenerator( const bool _enable_validation, const int _bufferX, const int _bufferY ) : m_validation( _enable_validation ), m_isDestroyed( false )
+		{ m_buffer_resolution[0] = _bufferX; m_buffer_resolution[1] = _bufferY; }
+
+		~VkGenerator( )
+		{ Destroy(); }
 
 		/* copy */
 		VkGenerator( const VkGenerator& _other ) = delete;
@@ -56,21 +65,33 @@ namespace VkGen
 		/* Test */
 		void SelfTest( );
 
+		/* Destroy */
+		void Destroy();
+
 		/* private functions */
 	private:
 		VkGenerator( ) = default;
 
 		/* Helpers */
 		std::vector<const char*> GetRequiredExtensions( ) const;
-		bool ValidationLayerSupport( ) const;
-		QueueFamilyIndices FindQueueFamily( const vk::PhysicalDevice ) const;
-		bool isDeviceSuitable( const vk::PhysicalDevice ) const;
+		VkBool32 ValidationLayerSupport( ) const;
+		VkBool32 IsDeviceSuitable( const vk::PhysicalDevice );
+		QueueFamilyIndices FindQueueFamilies( const vk::PhysicalDevice );
+		VkBool32 CheckDeviceExtensionSupport( const vk::PhysicalDevice );
+		SwapChainSupportDetails QuerySwapChainSupport( const vk::PhysicalDevice );
 
 		/* Vk api functions */
+		void CreateWindow();
 		void CreateInstance( );
 		void PickPhysicalDevice( );
 		void CreateLogicalDevice( );
 		void CreateSurface( );
+
+		void DestroyInstance();
+		void DestroyDevice();
+		void DestroySurface();
+
+		bool IsDestroyed() const;
 
 		/* public members */
 	public:
@@ -85,7 +106,13 @@ namespace VkGen
 		vk::Queue m_graphics_queue;
 		vk::Queue m_present_queue;
 
+		vk::SurfaceKHR m_surface;
+		WindowHandle* m_window_handle;
+
+		int m_buffer_resolution[2];
+
 		bool m_validation = false;
+		bool m_isDestroyed = true;
 
 		const std::vector<const char*> m_validation_layers =
 		{
