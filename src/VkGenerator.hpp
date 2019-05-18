@@ -51,8 +51,7 @@ namespace VkGen
 		/* constructor/destructor */
 		VkGenerator(const bool _enable_validation,
 		            const int  _bufferX,
-		            const int  _bufferY) : m_validation(_enable_validation),
-		                                   m_isDestroyed(false)
+		            const int  _bufferY) : m_isDestroyed(false)
 		{
 			m_buffer_resolution[0] = _bufferX;
 			m_buffer_resolution[1] = _bufferY;
@@ -72,6 +71,9 @@ namespace VkGen
 		VkGenerator(const VkGenerator&& _other) = delete;
 
 		void operator=(const VkGenerator&& _other) = delete;
+
+		/* Initialise */
+		void Init();
 
 		/* Test */
 		void SelfTest();
@@ -96,6 +98,10 @@ namespace VkGen
 
 		SwapChainSupportDetails QuerySwapChainSupport(const vk::PhysicalDevice);
 
+		void LogInitState();
+
+		void LogDeviceInfo();
+
 		/* Vk api functions */
 		void CreateWindow();
 
@@ -119,13 +125,55 @@ namespace VkGen
 
 		void DestroyValidation();
 
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
-		                                                    VkDebugUtilsMessageTypeFlagsEXT             messageType,
-		                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		                                                    void*                                       pUserData)
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT      _messageSeverity,
+		                                                    VkDebugUtilsMessageTypeFlagsEXT             _messageType,
+		                                                    const VkDebugUtilsMessengerCallbackDataEXT* _pCallbackData,
+		                                                    void*                                       _pUserData)
 		{
-			std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+			std::cerr << "validation layer: " << _pCallbackData->pMessage << std::endl;
 			return VK_FALSE;
+		}
+
+		/* Setters & Getters */
+	public:
+		void LogStateOnInitisation(VkBool32 _log)
+		{
+			m_log_state_on_initialise = _log;
+		}
+
+		void LogDeviceInfo( VkBool32 _log )
+		{
+			m_log_device_info = _log;
+		}
+
+		void RequireValidation(VkBool32 _validation)
+		{
+			m_validation = _validation;
+		}
+
+		vk::Instance& Instance()
+		{
+			return m_instance;
+		}
+
+		vk::PhysicalDevice& PhysicalDevice()
+		{
+			return m_physical_device;
+		}
+
+		vk::Device& Device()
+		{
+			return m_device;
+		}
+
+		vk::Queue& GraphicsQueue()
+		{
+			return m_graphics_queue;
+		}
+
+		vk::Queue& PresentQueue()
+		{
+			return m_present_queue;
 		}
 
 		/* public members */
@@ -146,8 +194,10 @@ namespace VkGen
 
 		int m_buffer_resolution[2];
 
-		bool m_validation  = false;
-		bool m_isDestroyed = true;
+		bool m_validation              = false;
+		bool m_isDestroyed             = true;
+		bool m_log_state_on_initialise = true;
+		bool m_log_device_info         = true;
 
 		vk::DebugUtilsMessengerEXT m_callback;
 

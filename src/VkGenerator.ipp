@@ -6,9 +6,30 @@
 
 namespace VkGen
 {
+	inline void VkGenerator::Init()
+	{
+		LogInitState();
+
+		m_isDestroyed = false;
+
+		CreateWindow();
+		CreateInstance();
+
+		RequestValidation();
+
+		CreateSurface();
+		PickPhysicalDevice();
+		CreateLogicalDevice();
+	}
+
 	inline void VkGenerator::SelfTest()
 	{
 		m_isDestroyed = false;
+
+		const bool logInitilseVal = m_log_state_on_initialise;
+		m_log_state_on_initialise = true;
+
+		LogInitState();
 
 		CreateWindow();
 		CreateInstance();
@@ -20,6 +41,8 @@ namespace VkGen
 		CreateLogicalDevice();
 
 		Destroy();
+
+		m_log_state_on_initialise = logInitilseVal;
 	}
 
 	inline void VkGenerator::CreateWindow()
@@ -128,6 +151,117 @@ namespace VkGen
 		details.presentModes = _physical_device.getSurfacePresentModesKHR(m_surface);
 
 		return details;
+	}
+
+	inline void VkGenerator::LogInitState()
+	{
+		if (!m_log_state_on_initialise)
+		{
+			return;
+		}
+
+		std::string api;
+		std::string api_ver;
+		switch (platform_lib)
+		{
+			case ELibrary::SDL2:
+				api = "Using SDL2\n";
+				break;
+			case ELibrary::GLFW:
+				api_ver = glfwGetVersionString();
+				api = "Using GLFW " "(" + api_ver + ")\n";
+				break;
+			case ELibrary::NOT_SET:
+			default:
+				api = "Platform Not Set\n";
+		}
+
+		std::clog
+				<< std::boolalpha
+				<< api
+				<< "Viewport Dimensions: x:"
+				<< m_buffer_resolution[0]
+				<< " y:"
+				<< m_buffer_resolution[1]
+				<< std::endl
+				<< "Validation requested: "
+				<< m_validation
+				<< std::endl;
+	}
+
+	// http://vulkan.gpuinfo.org/
+	// https://www.reddit.com/r/vulkan/comments/4ta9nj/is_there_a_comprehensive_list_of_the_names_and/
+	inline std::string VendorIDToString(uint32_t _vendor_id)
+	{
+		switch (_vendor_id)
+		{
+			case 0x1002:
+			{
+				return "AMD";
+			}
+			case 0x10DE:
+			{
+				return "Nvidia";
+			}
+			case 0x8086:
+			{
+				return "Intel";
+			}
+			case 0x13B5:
+			{
+				return "Arm";
+			}
+			default:
+			{
+				return "Unrecognised";
+			}
+		}
+	}
+
+	inline std::string DeviceTypeToString(vk::PhysicalDeviceType _device_type)
+	{
+		switch (_device_type)
+		{
+			case vk::PhysicalDeviceType::eDiscreteGpu:
+			{
+				return "Discrete GPU";
+			}
+			case vk::PhysicalDeviceType::eIntegratedGpu:
+			{
+				return "integrated GPU";
+			}
+			case vk::PhysicalDeviceType::eVirtualGpu:
+			{
+				return "Virtual GPU";
+			}
+			case vk::PhysicalDeviceType::eCpu:
+			{
+				return "CPU";
+			}
+			default:
+			{
+				return "Other";
+			}
+		}
+	}
+
+	inline void VkGenerator::LogDeviceInfo()
+	{
+		if (!m_log_device_info)
+		{
+			return;
+		}
+
+		auto deviceProperties = m_physical_device.getProperties();
+
+		std::clog
+				<< "Device Information: "
+				<< DeviceTypeToString(deviceProperties.deviceType)
+				<< " "
+				<< VendorIDToString(deviceProperties.vendorID)
+				<< " "
+				<< deviceProperties.deviceName
+				<< std::endl;
 	}
 
 	inline VkBool32 VkGenerator::IsDeviceSuitable(const vk::PhysicalDevice _physical_device)
@@ -269,15 +403,16 @@ namespace VkGen
 		}
 
 		assert(( "failed to find suitable physical device", m_physical_device != nullptr ));
+
+		LogDeviceInfo();
 	}
 
 	inline void VkGenerator::CreateLogicalDevice()
 	{
-		QueueFamilyIndices indices = FindQueueFamilies(m_physical_device);
+		const QueueFamilyIndices indices = FindQueueFamilies(m_physical_device);
 
 		std::vector<vk::DeviceQueueCreateInfo> queue_create_info     = {};
-		std::set<int>                          unique_queue_families =
-				{indices.graphics_family, indices.present_family};
+		std::set<int>                          unique_queue_families = {indices.graphics_family, indices.present_family};
 
 		float queue_priority = 1.0f;
 		for (int queue_family : unique_queue_families)
