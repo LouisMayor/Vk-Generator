@@ -228,7 +228,7 @@ namespace VkGen
 			}
 			case vk::PhysicalDeviceType::eIntegratedGpu:
 			{
-				return "integrated GPU";
+				return "Integrated GPU";
 			}
 			case vk::PhysicalDeviceType::eVirtualGpu:
 			{
