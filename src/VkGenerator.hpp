@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "vulkan/vulkan.hpp"
+#include <iostream>
 
 namespace VkGen
 {
@@ -114,6 +115,19 @@ namespace VkGen
 
 		bool IsDestroyed() const;
 
+		bool RequestValidation();
+
+		void DestroyValidation();
+
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
+		                                                    VkDebugUtilsMessageTypeFlagsEXT             messageType,
+		                                                    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+		                                                    void*                                       pUserData)
+		{
+			std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+			return VK_FALSE;
+		}
+
 		/* public members */
 	public:
 
@@ -134,6 +148,8 @@ namespace VkGen
 
 		bool m_validation  = false;
 		bool m_isDestroyed = true;
+
+		vk::DebugUtilsMessengerEXT m_callback;
 
 		const std::vector<const char*> m_validation_layers =
 		{

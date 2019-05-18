@@ -12,6 +12,9 @@ namespace VkGen
 
 		CreateWindow();
 		CreateInstance();
+
+		RequestValidation();
+
 		CreateSurface();
 		PickPhysicalDevice();
 		CreateLogicalDevice();
@@ -44,6 +47,31 @@ namespace VkGen
 			glfwSetWindowPos(m_window_handle, 0, 30);
 			glfwHideWindow(m_window_handle);
 		}
+	}
+
+	inline bool VkGenerator::RequestValidation()
+	{
+		if (!m_validation || m_instance == nullptr)
+		{
+			return false;
+		}
+
+		vk::DebugUtilsMessengerCreateInfoEXT debug_create_info =
+		{
+			{},
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning |
+			vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
+			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
+			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
+			DebugCallback
+		};
+
+		m_callback = m_instance.createDebugUtilsMessengerEXT(debug_create_info, nullptr,
+		                                                     vk::DispatchLoaderDynamic{m_instance});
+
+		assert(( "failed to create validation", m_callback != 0 ));
+
+		return true;
 	}
 
 	inline QueueFamilyIndices VkGenerator::FindQueueFamilies(const vk::PhysicalDevice _physical_device)
@@ -293,6 +321,16 @@ namespace VkGen
 		m_present_queue  = m_device.getQueue(indices.present_family, 0);
 	}
 
+	inline void VkGenerator::DestroyValidation()
+	{
+		if (!m_validation)
+		{
+			return;
+		}
+
+		m_instance.destroyDebugUtilsMessengerEXT(m_callback, nullptr, vk::DispatchLoaderDynamic{m_instance});
+	}
+
 	inline bool VkGenerator::IsDestroyed() const
 	{
 		return m_isDestroyed;
@@ -309,6 +347,8 @@ namespace VkGen
 
 		DestroyDevice();
 		DestroySurface();
+
+		DestroyValidation();
 		DestroyInstance();
 
 		m_isDestroyed = true;
