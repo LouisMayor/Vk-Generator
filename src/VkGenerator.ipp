@@ -45,6 +45,25 @@ namespace VkGen
 		m_log_state_on_initialise = logInitilseVal;
 	}
 
+	inline void VkGenerator::DisplayWindow(VkBool32 _show)
+	{
+		if (platform_lib == ELibrary::SDL2)
+		{ }
+		else if (platform_lib == ELibrary::GLFW)
+		{
+			if (m_window_showing)
+			{
+				glfwHideWindow(m_window_handle);
+				m_window_showing = false;
+			}
+			else
+			{
+				glfwShowWindow(m_window_handle);
+				m_window_showing = true;
+			}
+		}
+	}
+
 	inline void VkGenerator::CreateWindow()
 	{
 		if (platform_lib == ELibrary::SDL2)
@@ -69,6 +88,8 @@ namespace VkGen
 
 			glfwSetWindowPos(m_window_handle, 0, 30);
 			glfwHideWindow(m_window_handle);
+
+			m_window_showing = false;
 		}
 	}
 
@@ -79,6 +100,11 @@ namespace VkGen
 			return false;
 		}
 
+		if (m_validation_callback == nullptr)
+		{
+			m_validation_callback = DebugCallback;
+		}
+
 		vk::DebugUtilsMessengerCreateInfoEXT debug_create_info =
 		{
 			{},
@@ -86,7 +112,7 @@ namespace VkGen
 			vk::DebugUtilsMessageSeverityFlagBitsEXT::eError,
 			vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation |
 			vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance,
-			DebugCallback
+			m_validation_callback
 		};
 
 		m_callback = m_instance.createDebugUtilsMessengerEXT(debug_create_info, nullptr,
@@ -264,23 +290,29 @@ namespace VkGen
 				<< std::endl;
 	}
 
+	inline void VkGenerator::RefreshSwapchainDetails()
+	{
+		m_swapchain_support = QuerySwapChainSupport(PhysicalDevice());
+	}
+
 	inline VkBool32 VkGenerator::IsDeviceSuitable(const vk::PhysicalDevice _physical_device)
 	{
-		QueueFamilyIndices indices            = FindQueueFamilies(_physical_device);
-		const VkBool32     extensionSupported = CheckDeviceExtensionSupport(_physical_device);
+		m_queue_family_indices            = FindQueueFamilies(_physical_device);
+		const VkBool32 extensionSupported = CheckDeviceExtensionSupport(_physical_device);
 
 		bool swapChainAdequate = false;
 
 		if (extensionSupported)
 		{
-			SwapChainSupportDetails swapChainSupport = QuerySwapChainSupport(_physical_device);
-			swapChainAdequate                        = !swapChainSupport.formats.empty() && !swapChainSupport.
-			                                                                                 presentModes.empty();
+			m_swapchain_support = QuerySwapChainSupport(_physical_device);
+			swapChainAdequate   = !m_swapchain_support.formats.empty() && !m_swapchain_support.
+			                                                               presentModes.empty();
 		}
 
 		vk::PhysicalDeviceFeatures supportedFeatures = _physical_device.getFeatures();
 
-		return indices.IsComplete() && extensionSupported && swapChainAdequate && supportedFeatures.samplerAnisotropy;
+		return m_queue_family_indices.IsComplete() && extensionSupported
+				&& swapChainAdequate && supportedFeatures.samplerAnisotropy;
 	}
 
 	inline VkBool32 VkGenerator::ValidationLayerSupport() const
@@ -464,6 +496,13 @@ namespace VkGen
 		}
 
 		m_instance.destroyDebugUtilsMessengerEXT(m_callback, nullptr, vk::DispatchLoaderDynamic{m_instance});
+	}
+
+	inline void VkGenerator::AddValidationLayerCallback(
+		VkBool32 (__stdcall*func_ptr)(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT, const
+		                              VkDebugUtilsMessengerCallbackDataEXT* , void*                          ))
+	{
+		m_validation_callback = func_ptr;
 	}
 
 	inline bool VkGenerator::IsDestroyed() const
